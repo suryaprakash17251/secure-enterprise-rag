@@ -18,18 +18,24 @@ Question: {question}
 Answer:"""
 
 
-def answer(question: str, role: str, k: int = 8):
+def retrieve(question: str, role: str, k: int = 8):
     depts = allowed_departments(role)
     if not depts:
-        return "Access denied: unknown role.", []
-
+        return []
     flt = models.Filter(must=[
         models.FieldCondition(
             key="metadata.department",
             match=models.MatchAny(any=depts),
         )
     ])
-    docs = store.similarity_search(question, k=k, filter=flt)
+    return store.similarity_search(question, k=k, filter=flt)
+
+
+def answer(question: str, role: str, k: int = 8):
+    if not allowed_departments(role):
+        return "Access denied: unknown role.", []
+
+    docs = retrieve(question, role, k)
     context = "\n\n".join(
         f"[{d.metadata['source']} | {d.metadata['department']}]\n{d.page_content}"
         for d in docs
